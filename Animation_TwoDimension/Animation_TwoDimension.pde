@@ -2,7 +2,7 @@
 Cassie Mullins
 5/19/2022
 
-This version of my cellular automata code is primarily for rendering out animated versions of the 1D automata.
+This version of my cellular automata code is primarily for rendering out animated versions of the 2D automata.
 By defualt it is setup for Youtube aspect ratio, but was also used to render instagram videos.
 */
 
@@ -16,7 +16,7 @@ int numColors = 10;
 //Square is the square size, ie how many pixels each cell in the grid is
 int square;
 
-//The current set of rules, always 11 int values
+//The current set of rules, always 12 int values
 int[] ruleSet;
 
 //Frame number used for saving images and knowing when to reset
@@ -39,10 +39,14 @@ int baseRed = -1;
 int baseGreen = -1;
 int baseBlue = -1;
 
+//Changing all the pixels each frame was looking very staticy so each pixel instead has a probability of changing at each frame
+//By Defualt this number is 10, but is randomly changed for each different setup
+int changeProbability = 10;
+
 void setup() {
   size(960,540);
 
-  //Figure out square size and then how many rows
+//Figure out square size and then how many rows
   square = (int)(width/(cols-1));
   rows = (int)(height/square) + 1;
   
@@ -82,83 +86,95 @@ void drawSquares() {
          rect(x,y,square,square);
      }
    }
-   
-   //Create a new 2D array to be next frame's colors
-   int[][] nextIter = new int[cols][rows];
-   
-   //Fill most of the array with current cells, shifted over one
-   for (int i = 1; i < cols; i++) {
-     nextIter[i] = colors[i-1]; 
-   }
-   
-   //Get the new row of cells and replace current with new
-   nextIter[0] = getNextCol(nextIter[1]);
-   colors = nextIter;
+   //Get the next iteration of the automata
+   colors = getNextCol(colors);
 }
 
-//Function that gets the next column using cellular automata rules
-int[] getNextCol(int[] prev) {
+//Function that gets the next grid using cellular automata rules
+int[][] getNextCol(int[][] prev) {
   
-  //Create new column
-   int[] next = new int[rows];
+    //Create a new grid
+   int[][] next = new int[cols][rows];
    for (int i = 0; i < rows; i++) {
-     
-     //Get the index of the previous and next cell, wraps around at ends
-     int prevI = i == 0 ? rows - 1 : i - 1; 
-     int nextI = i == rows - 1 ? 0 : i + 1;
-     
-     //Get value of current cell and previous and next cell
-     int l = prev[prevI];
-     int m = prev[i];
-     int r = prev[nextI];
-     
-     //Get values to use with rules by comparing previous and next cell value to current
-     int valL = l - m;
-     int valR = r - m;
-     
-     // rules are positive and negative numbers, depending on whether adjacent 
-     // cells are greater or less than the current cell determines which rule is 
-     // used, ie which random number is added to the current cell
-     int val = m;
-     if (valL == 0 && valR == 0) {
-        val += ruleSet[0];
-     } else if (valL > 0 && valR > 0) {
-       val += ruleSet[1];
-     } else if (valL < 0 && valR < 0) {
-       val += ruleSet[2];
-     } else if (valL == 0 && valR < 0) {
-       val += ruleSet[3];
-     } else if (valL > 0 && valR == 0) {
-       val += ruleSet[4];
-     } else if (valL < 0 && valR == 0) {
-       val += ruleSet[5];
-     } else if (valL == 0 && valR > 0) {
-       val += ruleSet[6];
-     }  else if (valL >= 0 && valR < 0) {
-       val += ruleSet[7];
-     } else if (valL > 0 && valR <= 0) {
-       val += ruleSet[8];
-     } else if (valL < 0 && valR >= 0) {
-       val += ruleSet[9];
-     } else if (valL <= 0 && valR > 0) {
-       val += ruleSet[10];
+     for (int j = 0; j < cols; j++) {
+       int change = (int)random(100);
+       if (changeProbability >= change) {
+         
+         //Get the index of the surrounding cells, wraps around at edges
+         int prevI = i == 0 ? rows - 1 : i - 1; 
+         int nextI = i == rows - 1 ? 0 : i + 1;
+         
+         int prevJ = j == 0 ? cols - 1 : j - 1; 
+         int nextJ = j == cols - 1 ? 0 : j + 1;
+         
+         //Get value of current cell and surrounding cells
+         int l = prev[j][prevI];
+         int m = prev[j][i];
+         int r = prev[j][nextI];
+         int u = prev[prevJ][i];
+         int d = prev[nextJ][i];
+         
+         //Get values to use with rules by comparing surrounding cell values to current
+         int valL = l - m;
+         int valR = r - m;
+         int valU = u - m;
+         int valD = d - m;
+         
+         // rules are positive and negative numbers, depending on whether adjacent 
+         // cells are greater or less than the current cell determines which rule is 
+         // used, ie which random number is added to the current cell
+         int val = m;
+         if (valL == 0) {
+           val += ruleSet[0]; 
+         } else if (valL < 0) {
+           val += ruleSet[1]; 
+         } else {
+           val += ruleSet[2]; 
+         }
+         
+         if (valR == 0) {
+           val += ruleSet[3]; 
+         } else if (valR < 0) {
+           val += ruleSet[4]; 
+         } else {
+           val += ruleSet[5]; 
+         }
+         
+         if (valU == 0) {
+           val += ruleSet[6]; 
+         } else if (valU < 0) {
+           val += ruleSet[7]; 
+         } else {
+           val += ruleSet[8]; 
+         }
+         
+         if (valD == 0) {
+           val += ruleSet[9]; 
+         } else if (valD < 0) {
+           val += ruleSet[10]; 
+         } else {
+           val += ruleSet[11]; 
+         }
+         
+         if (l == numColors - 1 && m == 0) {
+           val = numColors - 1; 
+         }
+         
+         //Make sure value is from 0 to number of colors - 1
+         val = val > numColors - 1 ? numColors - 1 : val < 0 ? 0 : val;
+         next[j][i] = val;
+       } else {
+         next[j][i] = prev[j][i];
+       }
      }
-     if (l == numColors - 1 && m == 0) {
-       val = numColors - 1; 
-     }
-     
-     //Make sure value is from 0 to number of colors - 1
-     val = val > numColors - 1 ? numColors - 1 : val < 0 ? 0 : val;
-     
-     next[i] = val;
    }
    return next;
 }
 
 //Generates a random set of rules
 int[] generateRules() {
-  int[] rules = new int[11];
-  for (int i = 0; i < 11; i++) {
+  int[] rules = new int[12];
+  for (int i = 0; i < 12; i++) {
     int rule = (int)random(-numColors + 1, numColors);
     rules[i] = rule;
   }
@@ -168,7 +184,6 @@ int[] generateRules() {
 //Checks to see if current ruleset has produced a "good" image
 //For me a good image is an image that has all the colors and isn't just horizontal stripes
 boolean calculateValue() {
-  
   //Create a boolean list, one bool for each color so we can determine if all the colors are present
   boolean[] checkList = new boolean[numColors];
   for (int i = 0; i < numColors; i++) {
@@ -178,7 +193,6 @@ boolean calculateValue() {
   //Loop through all the pixels
   for (int x = 1; x < width-1; x++) {
     for (int y = 0; y < height; y++) {
-      
       //Get the current pixel's color
       color col = get(x,y);
       float r = red(col);
@@ -199,7 +213,7 @@ boolean calculateValue() {
       //Check to see if adjacent pixels are the same color, don't count if they are to avoid images that are only horizontal stripes
       //Can remove or adjust this check depending on desired results, sometimes horizontal stripe patterns are cool
       if (!(r == r0 && r == r2 && g == g0 && g == g2 && b == b0 && b == b2)) {
-          //Loop throuhg list of colors, once color is found, set boolean in list to true
+        //Loop throuhg list of colors, once color is found, set boolean in list to true
          for (int i = 0; i < numColors; i++) {
             color col1 = colorList[i];
             float r1 = red(col1);
@@ -281,4 +295,6 @@ void generateNewSetup() {
         startColors[i][j] = randomColor;
      }
   }
+  
+  changeProbability = (int)random(2, 50);
 }
